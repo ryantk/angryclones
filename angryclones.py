@@ -17,7 +17,7 @@ class Ball:
     Provides a ball for the player to fire from the trebuchet
     """
 
-    def __init__(self, space, x, y):
+    def __init__(self, screen, space, x, y):
         """
         Sets up pygame and pymunk properties for the Ball
         """
@@ -31,6 +31,7 @@ class Ball:
         shape.friction = 15.0
         shape.elasticity = 0.9
         space.add(body, shape)
+        self.screen = screen
         self.ball = shape
         self.colour = THECOLORS["red"]
 
@@ -38,12 +39,11 @@ class Ball:
         """
         Draws the ball to the screen
         """
-        global screen
 
         ball = self.ball
         r = ball.radius
         p = to_pygame(ball.body.position)
-        pygame.draw.circle(screen, self.colour, p, int(r), 20)
+        pygame.draw.circle(self.screen, self.colour, p, int(r), 20)
 
     def random_colour(self):
         """
@@ -248,11 +248,10 @@ class Image:
         """
         self.rect = self.rect.move(position)
 
-    def display(self):
+    def display(self, screen):
         """
         Draws the image to the screen
         """
-        global screen
         screen.blit(self.img, self.rect)
 
     def get_size(self):
@@ -294,9 +293,11 @@ class Message:
         screen.blit(shadow_text, (self.position[0] + 3, self.position[1] + 3))
         screen.blit(self.text,self.position)
 
-def main():
-    
-    # Setup Level common variables -------------------------------- ##
+
+
+
+def setup_game(background_size):
+     # Setup Level common variables -------------------------------- ##
 
     force    = 2300 # Force upon the ball when it is fired
     rampsize = 100  # end coordinate of the ball's ramp
@@ -305,13 +306,8 @@ def main():
     pygame.display.set_caption("Angry Clones")
     clock = pygame.time.Clock()    
 
-    # Set up static images, these never move
-    greyed_out = Image("greyed_out.jpg")
-    background = Image("machinarium_floor.jpg")
-    trebuchet  = Image("trebuchet.png", (20,450))
-
-    global screen
-    screen = pygame.display.set_mode(background.get_size())
+    screen = pygame.display.set_mode(background_size)
+    background_size
     
     space = pm.Space()
     space.gravity = (0.0, -300.0)
@@ -331,8 +327,10 @@ def main():
     ball_area = pm.Segment(body, (0,110), (60,110), .0)
     space.add(ball_area)
 
-    
-    # Title Screen ------------------------------------------------- ##
+    return screen, space, clock, body
+
+def display_title_screen():
+     # Title Screen ------------------------------------------------- ##
 
     count = 0
     while count < 70:
@@ -348,7 +346,7 @@ def main():
                 if event.key == 32:
                     count = 71
 
-        greyed_out.display()
+        greyed_out.display(screen)
         
         Message("Angry Clones!", (220,250), 95).display_shadow()
 
@@ -357,6 +355,20 @@ def main():
 
     # End Title Screen ---------------------------------------------- ##
 
+def setup_images():
+    # Set up static images, these never move
+    greyed_out = Image("greyed_out.jpg")
+    background = Image("machinarium_floor.jpg")
+    trebuchet  = Image("trebuchet.png", (20,450))
+
+    return greyed_out, background, trebuchet
+
+def main():
+    greyed_out, background, trebuchet = setup_images()
+    screen, space, clock, body = setup_game(background.get_size())
+    display_title_screen
+    
+   
     # Main Game loop ------------------------------------------------ ##
 
     game_complete = False
@@ -374,7 +386,7 @@ def main():
             if level == 0:
                 balls = []    
                 x,y = (2,110)
-                balls.append(Ball(space, x, y))
+                balls.append(Ball(screen, space, x, y))
 
                 # Add crates
                 crates = []
@@ -402,7 +414,7 @@ def main():
 
                 balls = []    
                 x,y = (2,110)
-                balls.append(Ball(space, x, y))
+                balls.append(Ball(screen, space, x, y))
 
                 # Map of intended level     -   Key
                 #------------------------------------------------
@@ -450,7 +462,7 @@ def main():
 
                 balls = []    
                 x,y = (2,110)
-                balls.append(Ball(space, x, y))
+                balls.append(Ball(screen, space, x, y))
 
                 # Map of intended level     - Key
                 #------------------------------------------------
@@ -506,7 +518,7 @@ def main():
                             balls[0].delete(space)
                             balls = []    
                             x,y = (2,110)
-                            balls.append(Ball(space, x, y))
+                            balls.append(Ball(screen, space, x, y))
                             balls[0].random_colour()
 
                 #Get ramp slope from mouse 'y'
@@ -514,15 +526,15 @@ def main():
                 slope = pm.Segment(body, (60,110), (250,rampsize), .0)
                 space.add(slope)
 
-                background.display()
-                trebuchet.display()  
-                balls[0].draw()          
+                background.display(screen)
+                trebuchet.display(screen)  
+                balls[0].draw(screen)          
 
                 if pygame.mouse.get_pressed()[0]:
                     balls[0].fire(force/3)
 
                 for crate in crates:
-                    crate.draw()
+                    crate.draw(screen)
 
                 # Add variety to crate's looks
                 if level == 0:
@@ -537,7 +549,7 @@ def main():
                     crates[5].brake_crate()
 
                 for snake in snakes:
-                    snake.draw()
+                    snake.draw(screen)
                     if snake.is_dead():
                         snake.kill_snake() #This doesn't make sense!
                         Message("The Snake is Dead!", \
